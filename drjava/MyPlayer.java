@@ -63,7 +63,7 @@ public class MyPlayer implements IPlayer {
      */
     public void analyzeBoard(IAnalysisBoard board) {
         // Treasure[] treasures = getSortedTreasures(board);
-        strategy = Pathfinding.pathfindingNetwork(board, new Pathfinding.ActualCostSelector());
+        strategy = Pathfinding.greedyPathfindingNetwork(board, new Pathfinding.ActualCostSelector());
     }
 
     /**
