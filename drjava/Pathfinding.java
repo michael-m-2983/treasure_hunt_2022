@@ -277,26 +277,100 @@ public class Pathfinding {
         }
     }
 
-    public HashMap<Treasure, Treasure> getAdjacencyList(IAnalysisBoard board) {
-        HashMap<Treasure, Treasure> edges = new HashMap<>();
+    public static ArrayList<Coordinate> getSortedTreasures(IAnalysisBoard board, ActualCostSelector cmp) {
+        ArrayList<Treasure> treasures = new ArrayList<>();
+        ArrayList<Coordinate> sortedTreasures = new ArrayList<>();
+        treasures.addAll(board.getTreasures());
+        // Reuse ActualCostSelector to keep track of distances between the nodes
 
-        List<Treasure> treasures = board.getTreasures();
-        for (Treasure a : treasures)
-            for (Treasure b : treasures)
-                if (a != b)
-                    edges.put(a, b);
+        Coordinate position = new Coordinate(board.getStartingLocation());
+        while (treasures.size() > 0) {
+            // Sort the remaining treasures with the comparator
+            cmp.sort_origin = position;
+            Collections.sort(treasures, cmp);
 
-        return edges;
+            // Remove best candidate
+            Treasure target = treasures.remove(treasures.size() - 1);
+            sortedTreasures.add(new Coordinate(target.getLocation()));
+            position = new Coordinate(target.getLocation());
+        }
+
+        return sortedTreasures;
     }
 
-    public ArrayList<Treasure> getSortedTreasures(IAnalysisBoard board) {
-        ArrayList<Treasure> treasures = new ArrayList<>();
+    // Sums up the pathfound distances between a tour of nodes
+    public static int calculatePathCostFromNodes(ArrayList<Coordinate> tour, ActualCostSelector distances) {
+        int acc = 0;
+        for (int i = 0; i < tour.size() - 1; i++) {
+            acc += distances.getDistance(tour.get(i), tour.get(i + 1)); // -1 because of overlap, doesn't really
+                                                                        // matter for comparison though
+        }
+        return acc;
+    }
 
-        // Reuse ActualCostSelector to keep track of distances between the nodes
-        ActualCostSelector distances = new ActualCostSelector();
-        distances.init(board);
+    public static ArrayList<Coordinate> swapEdge(ArrayList<Coordinate> tour, int i, int j) {
+        ArrayList<Coordinate> cds = new ArrayList<>();
+        cds.addAll(tour.subList(0, i + 1));
 
-        return treasures;
+        // Reverse tour between i and j
+        List<Coordinate> m = tour.subList(i + 1, j + 1);
+        Collections.reverse(m);
+        cds.addAll(m);
+
+        cds.addAll(tour.subList(j + 1, tour.size()));
+        return cds;
+    }
+
+    // Runs iterative 2-opt TSP path optimization on the treasure ordering which is
+    // slow-ish but sometimes can squeeze out a few (not very many) more points!
+    public static ArrayList<Coordinate> optimizeTreasureOrdering(ArrayList<Coordinate> approximate,
+            ActualCostSelector distances) {
+        ArrayList<Coordinate> path = approximate;
+
+        int current = 0, newOptimized = calculatePathCostFromNodes(path, distances);
+        while (current != newOptimized) {
+            for (int i = 0; i < approximate.size() - 2; ++i) {
+                for (int j = i + 2; j < approximate.size() - 1; ++j) {
+                    if (distances.getDistance(path.get(i), path.get(i + 1)) +
+                            distances.getDistance(path.get(j), path.get(j + 1)) > distances.getDistance(path.get(i),
+                                    path.get(j)) +
+                                    distances.getDistance(path.get(j + 1), path.get(i + 1))) {
+                        swapEdge(path, i, j);
+                        break;
+                    }
+                }
+            }
+            current = newOptimized;
+            newOptimized = calculatePathCostFromNodes(path, distances);
+        }
+
+        return path;
+    }
+
+    // Concatenates the paths between a array of treasures, in traversal order,
+    // calculated by `getSortedTreasures` (Nearest-Neighbor ) fed through
+    // `optimizeTreasureOrdering` (2-opt local path optimization)
+    public static StrategyRecord generateTreasureTraversal(IAnalysisBoard board) {
+        StrategyRecord sr = new StrategyRecord();
+        ActualCostSelector cs = new ActualCostSelector();
+        cs.init(board);
+
+        ArrayDeque<Coordinate> treasures = new ArrayDeque<>();
+        // treasures.addAll(getSortedTreasures(board, cs));
+        treasures.addAll(optimizeTreasureOrdering(getSortedTreasures(board, cs),
+                cs));
+
+        Coordinate current = new Coordinate(board.getStartingLocation());
+        while (treasures.size() > 0) {
+            Coordinate next = treasures.removeFirst();
+
+            sr.path.addAll(cs.getEdgePath(current, next));
+
+            current = next;
+        }
+
+        sr.generateMoves();
+        return sr;
     }
 
     // The simplest and stupidest strategy to the traveling-salesman problem that

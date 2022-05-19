@@ -64,7 +64,8 @@ public class MyPlayer implements IPlayer {
     public void analyzeBoard(IAnalysisBoard board) {
         // The StrategyRecord stores a precalculated "plan" based on pathfinding and
         // treasure selection
-        strategy = Pathfinding.greedyPathfindingNetwork(board, new Pathfinding.ActualCostSelector());
+        // strategy = Pathfinding.greedyPathfindingNetwork(board, new Pathfinding.ActualCostSelector());
+        strategy = Pathfinding.generateTreasureTraversal(board);
     }
 
     /**
