@@ -62,7 +62,8 @@ public class MyPlayer implements IPlayer {
      * @param board The game board for your player to analyze
      */
     public void analyzeBoard(IAnalysisBoard board) {
-        // Treasure[] treasures = getSortedTreasures(board);
+        // The StrategyRecord stores a precalculated "plan" based on pathfinding and
+        // treasure selection
         strategy = Pathfinding.greedyPathfindingNetwork(board, new Pathfinding.ActualCostSelector());
     }
 

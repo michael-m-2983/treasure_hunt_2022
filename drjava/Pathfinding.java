@@ -93,14 +93,15 @@ public class Pathfinding {
         return a.manhattanDistance(b);
     }
 
-    // Improved version of Dijkstra's algorithm using a heuristic distance function to sort candidates.
-    // The only issue is that due to sorting, it only works efficiently for one target
+    // Improved version of Dijkstra's algorithm using a heuristic distance function
+    // to sort candidates.
+    // The only issue is that due to sorting, it only works efficiently for one
+    // target
     public static void Astar(IAnalysisBoard board, Coordinate start,
             HashMap<Coordinate, Integer> distance, HashMap<Coordinate, Coordinate> prev, Coordinate target) {
 
         PriorityQueue<CoordinateInfo> Q = new PriorityQueue<>();
         HashSet<Coordinate> visited = new HashSet<>();
-        HashMap<Coordinate, Integer> estimatedCost = new HashMap<>();
 
         int width = board.getWidth(), height = board.getHeight();
 
@@ -108,7 +109,6 @@ public class Pathfinding {
             for (int y = 0; y < height; ++y) {
                 Coordinate c = new Coordinate(x, y);
                 distance.put(c, Integer.MAX_VALUE);
-                estimatedCost.put(c, heuristic(c, target));
                 prev.put(c, null);
             }
 
@@ -138,10 +138,9 @@ public class Pathfinding {
                     if (newdist < distance.get(nbr)) {
                         distance.put(nbr, newdist);
                         prev.put(nbr, c);
-                        // Estimate cost.
-                        estimatedCost.put(nbr, newdist + heuristic(nbr, target));
-                        // Prioritize the "candidate" neighbors based on distance heuristic to the target.
-                        Q.add(new CoordinateInfo(nbr, estimatedCost.get(nbr)));
+                        // Prioritize the "candidate" neighbors based on distance heuristic to the
+                        // target.
+                        Q.add(new CoordinateInfo(nbr, newdist + heuristic(nbr, target)));
                     }
                 }
             }
@@ -278,6 +277,28 @@ public class Pathfinding {
         }
     }
 
+    public HashMap<Treasure, Treasure> getAdjacencyList(IAnalysisBoard board) {
+        HashMap<Treasure, Treasure> edges = new HashMap<>();
+
+        List<Treasure> treasures = board.getTreasures();
+        for (Treasure a : treasures)
+            for (Treasure b : treasures)
+                if (a != b)
+                    edges.put(a, b);
+
+        return edges;
+    }
+
+    public ArrayList<Treasure> getSortedTreasures(IAnalysisBoard board) {
+        ArrayList<Treasure> treasures = new ArrayList<>();
+
+        // Reuse ActualCostSelector to keep track of distances between the nodes
+        ActualCostSelector distances = new ActualCostSelector();
+        distances.init(board);
+
+        return treasures;
+    }
+
     // The simplest and stupidest strategy to the traveling-salesman problem that
     // is the treasure hunt. Simply pathfinds to the closest target and repeats
     // doing so until there are no treasures left.
@@ -302,7 +323,8 @@ public class Pathfinding {
             Treasure target = treasures.remove(treasures.size() - 1);
 
             ArrayList<Coordinate> travel;
-            // If cmp is an ActualCostSelector, it already has the path cached, so we use it!
+            // If cmp is an ActualCostSelector, it already has the path cached, so we use
+            // it!
             if (cmp instanceof ActualCostSelector)
                 travel = ((ActualCostSelector) cmp)
                         .getEdgePath(position, new Coordinate(target.getLocation()));
